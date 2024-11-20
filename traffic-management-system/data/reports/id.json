@@ -1,0 +1,25 @@
+app.post('/report', (req, res) => {
+    const { type, description, priority } = req.body;
+    const violation = { id: Date.now(), type, description, priority, date: new Date().toISOString() };
+
+    violationQueue.enqueue(violation);
+    historyStack.push(violation);
+
+    const fs = require('fs');
+    fs.appendFileSync('./data/violations.json', JSON.stringify(violation, null, 2) + '\n');
+
+    res.status(201).send({ message: 'Violation reported!', violation });
+    app.get('/reports/daily', (req, res) => {
+        const fs = require('fs');
+        const moment = require('moment');
+        const violations = JSON.parse(fs.readFileSync('./data/violations.json', 'utf8'));
+    
+        const today = moment().format('YYYY-MM-DD');
+        const dailyViolations = violations.filter(v => moment(v.date).isSame(today, 'day'));
+    
+        const report = `./data/reports/daily-${today}.json`;
+        fs.writeFileSync(report, JSON.stringify(dailyViolations, null, 2));
+    
+        res.send({ message: 'Daily report generated!', report });
+    });
+    
